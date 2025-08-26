@@ -18,10 +18,9 @@ export interface State {
 export interface Log {
     id: string;
     at: string;
-    distanceKm: number;
-    paceMinPerKm: number;
-    elapsedSec: number;
+    totalSec: number;
     runSec: number;
     restSec: number;
     sets: number;
+    warmupSec: number;
 }

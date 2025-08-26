@@ -1,16 +1,16 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import TimerCard from "@/components/TimerCard";
-import SettingsCard from "@/components/SettingsCard";
-import RecordsSection from "@/components/RecordsSection";
-import IOSInstallSheet from "@/components/IOSInstallSheet";
-import { useAudio } from "@/lib/audio";
-import { composePhoto } from "@/lib/photo";
-import { createTicker, fmtClock } from "@/lib/timer";
-import { loadLogs, saveLogs } from "@/lib/storage";
-import { Log, Phase, Settings, State } from "@/types";
+import SettingsCard, { SettingsForm } from "@/components/SettingsCard";
+import type { Settings, State, Phase, Log } from "@/types";
+import { useBeep, useBgAudio } from "@/lib/audio";
+import { loadLogs, saveLogs, loadSettings, saveSettings } from "@/lib/storage";
+
+const norm = (v: string, min: number) => {
+    const n = Math.floor(Number(v));
+    return Number.isFinite(n) && n >= min ? n : min;
+};
 
 export default function Page() {
     const [settings, setSettings] = useState<Settings>({
@@ -20,6 +20,13 @@ export default function Page() {
         warmupSec: 10,
         volume: 0.2,
     });
+    const [form, setForm] = useState<SettingsForm>({
+        run: "60",
+        rest: "90",
+        sets: "8",
+        warmup: "10",
+        volume: 0.2,
+    });
     const [state, setState] = useState<State>({
         phase: "warmup",
         setIndex: 1,
@@ -27,181 +34,171 @@ export default function Page() {
         running: false,
     });
     const [logs, setLogs] = useState<Log[]>([]);
-    const [distance, setDistance] = useState("");
-    const [photoURL, setPhotoURL] = useState<string | null>(null);
-    const [showIOS, setShowIOS] = useState(false);
-    const { beep, bgStart, bgStop } = useAudio(settings.volume);
-    const workerRef = useRef<Worker | null>(null);
-    const untilRef = useRef<number>(0);
+
+    const beep = useBeep(form.volume);
+    const bg = useBgAudio();
+
+    const tId = useRef<number | null>(null);
+    const target = useRef(0);
+    const prevSec = useRef<number | null>(null);
+    const phaseRef = useRef<Phase>("warmup");
+    const setIdxRef = useRef(1);
+    const leftRef = useRef(10);
+    const settingsRef = useRef(settings);
 
     useEffect(() => {
         setLogs(loadLogs());
     }, []);
-
-    const updateMedia = (title: string, position: number, duration: number) => {
-        try {
-            if ("mediaSession" in navigator) {
-                (navigator as any).mediaSession.metadata = new (window as any).MediaMetadata({
-                    title: `Async • ${title}`,
-                    artist: "Interval",
-                });
-                (navigator as any).mediaSession.setPositionState?.({
-                    position,
-                    duration,
-                    playbackRate: state.running ? 1 : 0,
-                });
-            }
-        } catch {}
-    };
-
-    const totalRemain = (phase: Phase, setIdx: number) => {
-        const curLeft =
-            phase === "warmup"
-                ? settings.warmupSec
-                : phase === "run"
-                ? settings.runSec
-                : settings.restSec;
-        let remain = curLeft;
-        let p = phase;
-        for (let s = setIdx; s <= settings.sets; s++) {
-            if (p === "warmup") {
-                remain += settings.runSec + settings.restSec;
-                p = "run";
-            } else if (p === "run") {
-                remain += settings.restSec;
-                p = "rest";
-            } else if (p === "rest") {
-                remain += s < settings.sets ? settings.runSec : 0;
-                p = s < settings.sets ? "run" : "done";
-            }
+    useEffect(() => {
+        const s = loadSettings();
+        if (s) {
+            setSettings(s);
+            settingsRef.current = s;
+            setForm({
+                run: String(s.runSec),
+                rest: String(s.restSec),
+                sets: String(s.sets),
+                warmup: String(s.warmupSec),
+                volume: s.volume,
+            });
+            setState((x) => ({ ...x, left: s.warmupSec }));
+            leftRef.current = s.warmupSec;
         }
-        return remain;
-    };
+    }, []);
+    useEffect(() => {
+        settingsRef.current = settings;
+    }, [settings]);
 
-    const onTick = async (now: number) => {
-        if (!state.running) return;
-        const leftMs = Math.max(0, untilRef.current - now);
-        const left = Math.ceil(leftMs / 1000);
-        if (left <= 10 && left > 0) beep(left === 1 ? 1200 : 900, 90);
-        const phaseDur =
-            state.phase === "warmup"
-                ? settings.warmupSec
-                : state.phase === "run"
-                ? settings.runSec
-                : settings.restSec;
-        const elapsedInPhase = Math.min(phaseDur, phaseDur - left + 1);
-        updateMedia(
-            `${state.phase.toUpperCase()} ${state.setIndex}/${settings.sets}`,
-            elapsedInPhase,
-            phaseDur
-        );
-        setState((prev) => ({ ...prev, left }));
-        if (left === 0) {
-            await beep(520, 220);
-            advance();
+    const tick = () => {
+        const now = Date.now();
+        if (now >= target.current) {
+            nextPhase();
+            return;
+        }
+        const left = Math.max(0, Math.floor((target.current - now) / 1000));
+        if (left !== prevSec.current) {
+            if (left > 0 && left <= 10) beep(900, 80);
+            prevSec.current = left;
+            leftRef.current = left;
+            setState((s) => ({ ...s, left }));
         }
     };
+
+    const applyForm = (): Settings => ({
+        runSec: norm(form.run, 1),
+        restSec: norm(form.rest, 1),
+        sets: norm(form.sets, 1),
+        warmupSec: norm(form.warmup, 0),
+        volume: form.volume,
+    });
 
     const start = async () => {
-        setState((s) => ({ ...s, phase: "warmup", left: settings.warmupSec, running: true }));
-        await bgStart();
-        workerRef.current?.postMessage("stop");
-        const w = createTicker(onTick);
-        workerRef.current = w;
-        w.postMessage("start");
-        const now = performance.now();
-        untilRef.current = now + settings.warmupSec * 1000;
+        if (tId.current) return;
+        const s = applyForm();
+        setSettings(s);
+        settingsRef.current = s;
+        saveSettings(s);
+        phaseRef.current = "warmup";
+        setIdxRef.current = 1;
+        leftRef.current = s.warmupSec;
+        prevSec.current = s.warmupSec;
+        setState({ phase: "warmup", setIndex: 1, left: s.warmupSec, running: true });
+        target.current = Date.now() + s.warmupSec * 1000;
+        tId.current = window.setInterval(tick, 200);
+        await bg.on("Async");
         await beep(660, 120);
     };
 
     const pause = () => {
+        if (!tId.current) return;
+        clearInterval(tId.current);
+        tId.current = null;
         setState((s) => ({ ...s, running: false }));
-        workerRef.current?.postMessage("stop");
     };
+
     const resume = () => {
-        if (state.phase === "done") return;
+        if (state.phase === "done" || tId.current) return;
         setState((s) => ({ ...s, running: true }));
-        const now = performance.now();
-        untilRef.current = now + state.left * 1000;
-        workerRef.current?.postMessage("start");
+        prevSec.current = leftRef.current;
+        target.current = Date.now() + leftRef.current * 1000;
+        tId.current = window.setInterval(tick, 200);
     };
+
     const reset = () => {
-        workerRef.current?.postMessage("stop");
-        setState({ phase: "warmup", setIndex: 1, left: settings.warmupSec, running: false });
-        bgStop();
+        if (tId.current) {
+            clearInterval(tId.current);
+            tId.current = null;
+        }
+        const s = settingsRef.current;
+        phaseRef.current = "warmup";
+        setIdxRef.current = 1;
+        leftRef.current = s.warmupSec;
+        prevSec.current = s.warmupSec;
+        setState({ phase: "warmup", setIndex: 1, left: s.warmupSec, running: false });
+        bg.off();
     };
 
-    const advance = () => {
-        setState((prev) => {
-            if (prev.phase === "warmup") {
-                untilRef.current = performance.now() + settings.runSec * 1000;
-                return { ...prev, phase: "run", left: settings.runSec };
-            }
-            if (prev.phase === "run") {
-                untilRef.current = performance.now() + settings.restSec * 1000;
-                return { ...prev, phase: "rest", left: settings.restSec };
-            }
-            if (prev.phase === "rest") {
-                if (prev.setIndex < settings.sets) {
-                    untilRef.current = performance.now() + settings.runSec * 1000;
-                    return {
-                        ...prev,
-                        phase: "run",
-                        setIndex: prev.setIndex + 1,
-                        left: settings.runSec,
-                    };
+    const nextPhase = () => {
+        const s = settingsRef.current;
+        if (phaseRef.current === "warmup") {
+            phaseRef.current = "run";
+            leftRef.current = s.runSec;
+            prevSec.current = s.runSec;
+            target.current = Date.now() + s.runSec * 1000;
+            setState((v) => ({ ...v, phase: "run", left: s.runSec }));
+            return;
+        }
+        if (phaseRef.current === "run") {
+            if (setIdxRef.current >= s.sets) {
+                if (tId.current) {
+                    clearInterval(tId.current);
+                    tId.current = null;
                 }
-                workerRef.current?.postMessage("stop");
-                bgStop();
-                return { ...prev, phase: "done", running: false, left: 0 };
+                phaseRef.current = "done";
+                leftRef.current = 0;
+                setState((v) => ({ ...v, phase: "done", running: false, left: 0 }));
+                bg.off();
+                return;
             }
-            return prev;
-        });
+            phaseRef.current = "rest";
+            leftRef.current = s.restSec;
+            prevSec.current = s.restSec;
+            target.current = Date.now() + s.restSec * 1000;
+            setState((v) => ({ ...v, phase: "rest", left: s.restSec }));
+            return;
+        }
+        if (phaseRef.current === "rest") {
+            setIdxRef.current += 1;
+            phaseRef.current = "run";
+            leftRef.current = s.runSec;
+            prevSec.current = s.runSec;
+            target.current = Date.now() + s.runSec * 1000;
+            setState((v) => ({ ...v, phase: "run", setIndex: setIdxRef.current, left: s.runSec }));
+            return;
+        }
     };
 
-    const saveLog = () => {
-        const elapsed =
-            settings.warmupSec +
-            settings.sets * (settings.runSec + settings.restSec) -
-            settings.restSec;
-        const dist = parseFloat(distance || "0");
-        const pace = dist > 0 ? elapsed / 60 / dist : 0;
+    const saveSimpleLog = () => {
+        const s = settingsRef.current;
+        const total = s.warmupSec + s.sets * (s.runSec + s.restSec) - s.restSec;
         const log: Log = {
             id: crypto.randomUUID(),
             at: new Date().toISOString(),
-            distanceKm: Number.isFinite(dist) ? dist : 0,
-            paceMinPerKm: pace,
-            elapsedSec: elapsed,
-            runSec: settings.runSec,
-            restSec: settings.restSec,
-            sets: settings.sets,
+            totalSec: total,
+            runSec: s.runSec,
+            restSec: s.restSec,
+            sets: s.sets,
+            warmupSec: s.warmupSec,
         };
         const next = [log, ...logs];
         setLogs(next);
         saveLogs(next);
+        alert("저장되었습니다.");
     };
-
-    const onPhoto = (file: File) => {
-        const url = URL.createObjectURL(file);
-        setPhotoURL(url);
-    };
-    const onCompose = async () => {
-        if (!photoURL) return;
-        const data = await composePhoto(photoURL, settings, distance);
-        const a = document.createElement("a");
-        a.href = data;
-        a.download = `async_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.jpg`;
-        a.click();
-    };
-
-    const estimate =
-        settings.warmupSec +
-        settings.sets * (settings.runSec + settings.restSec) -
-        settings.restSec;
 
     return (
         <main className="mx-auto max-w-sm px-4 pb-24 pt-6">
-            <Header onIOS={() => setShowIOS(true)} />
+            <Header />
             <TimerCard
                 phase={state.phase}
                 setIndex={state.setIndex}
@@ -213,23 +210,17 @@ export default function Page() {
                 onResume={resume}
                 onReset={reset}
             />
-            <SettingsCard
-                settings={settings}
-                setSettings={setSettings}
-                onBgOn={bgStart}
-                onBgOff={bgStop}
-            />
-            <RecordsSection
-                distance={distance}
-                setDistance={setDistance}
-                estimate={estimate}
-                onSave={saveLog}
-                onPhoto={onPhoto}
-                onCompose={onCompose}
-                photoURL={photoURL}
-                logs={logs}
-            />
-            <IOSInstallSheet open={showIOS} onClose={() => setShowIOS(false)} />
+            <SettingsCard form={form} setForm={setForm} />
+            {state.phase === "done" && (
+                <div className="mt-4">
+                    <button
+                        onClick={saveSimpleLog}
+                        className="w-full rounded-2xl py-3 bg-black text-white"
+                    >
+                        기록 저장
+                    </button>
+                </div>
+            )}
         </main>
     );
 }

@@ -1,80 +1,57 @@
 "use client";
 
-import { Settings } from "@/types";
+export type SettingsForm = {
+    run: string;
+    rest: string;
+    sets: string;
+    warmup: string;
+    volume: number;
+};
 
-export default function SettingsCard({
-    settings,
-    setSettings,
-    onBgOn,
-    onBgOff,
-}: {
-    settings: Settings;
-    setSettings: (s: Settings) => void;
-    onBgOn: () => void;
-    onBgOff: () => void;
-}) {
+type Props = { form: SettingsForm; setForm: (f: SettingsForm) => void };
+
+export default function SettingsCard({ form, setForm }: Props) {
     return (
         <section className="mt-5 rounded-3xl p-5 shadow-sm border border-neutral-100 bg-white">
-            <div className="font-semibold mb-2">설정</div>
             <div className="grid grid-cols-2 gap-3">
                 <label className="text-sm">
                     Run(sec)
                     <input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
                         className="w-full mt-1 rounded-xl border px-3 py-2"
-                        value={settings.runSec}
-                        onChange={(e) =>
-                            setSettings({
-                                ...settings,
-                                runSec: Math.max(1, Number(e.target.value || 1)),
-                            })
-                        }
+                        value={form.run}
+                        onChange={(e) => setForm({ ...form, run: e.target.value })}
                     />
                 </label>
                 <label className="text-sm">
                     Rest(sec)
                     <input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
                         className="w-full mt-1 rounded-xl border px-3 py-2"
-                        value={settings.restSec}
-                        onChange={(e) =>
-                            setSettings({
-                                ...settings,
-                                restSec: Math.max(1, Number(e.target.value || 1)),
-                            })
-                        }
+                        value={form.rest}
+                        onChange={(e) => setForm({ ...form, rest: e.target.value })}
                     />
                 </label>
                 <label className="text-sm">
                     Sets
                     <input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
                         className="w-full mt-1 rounded-xl border px-3 py-2"
-                        value={settings.sets}
-                        onChange={(e) =>
-                            setSettings({
-                                ...settings,
-                                sets: Math.max(1, Number(e.target.value || 1)),
-                            })
-                        }
+                        value={form.sets}
+                        onChange={(e) => setForm({ ...form, sets: e.target.value })}
                     />
                 </label>
                 <label className="text-sm">
                     Warmup(sec)
                     <input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
                         className="w-full mt-1 rounded-xl border px-3 py-2"
-                        value={settings.warmupSec}
-                        onChange={(e) =>
-                            setSettings({
-                                ...settings,
-                                warmupSec: Math.max(0, Number(e.target.value || 0)),
-                            })
-                        }
+                        value={form.warmup}
+                        onChange={(e) => setForm({ ...form, warmup: e.target.value })}
                     />
                 </label>
                 <label className="col-span-2 text-sm">
@@ -85,27 +62,10 @@ export default function SettingsCard({
                         max={1}
                         step={0.01}
                         className="w-full"
-                        value={settings.volume}
-                        onChange={(e) =>
-                            setSettings({ ...settings, volume: Number(e.target.value) })
-                        }
+                        value={form.volume}
+                        onChange={(e) => setForm({ ...form, volume: Number(e.target.value) })}
                     />
                 </label>
-            </div>
-            <div className="mt-3 text-xs text-neutral-500">iOS/Android 백그라운드 유지 보조</div>
-            <div className="mt-2">
-                <button
-                    onClick={onBgOn}
-                    className="rounded-xl px-3 py-2 border border-neutral-200 mr-2 active:scale-95"
-                >
-                    백그라운드 모드 ON
-                </button>
-                <button
-                    onClick={onBgOff}
-                    className="rounded-xl px-3 py-2 border border-neutral-200 active:scale-95"
-                >
-                    OFF
-                </button>
             </div>
         </section>
     );

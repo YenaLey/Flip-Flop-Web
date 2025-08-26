@@ -1,7 +1,6 @@
 "use client";
-
 import { fmtClock } from "@/lib/timer";
-import { Phase } from "@/types";
+import type { Phase } from "@/types";
 
 export default function TimerCard({
     phase,
@@ -37,25 +36,19 @@ export default function TimerCard({
                 <button
                     onClick={onStart}
                     disabled={!canStart}
-                    className="rounded-2xl py-3 bg-black text-white disabled:opacity-30 active:scale-95"
+                    className="rounded-2xl py-3 bg-black text-white disabled:opacity-30"
                 >
                     시작
                 </button>
                 <button
                     onClick={running ? onPause : onResume}
-                    className="rounded-2xl py-3 border border-neutral-200 active:scale-95"
+                    className="rounded-2xl py-3 border border-neutral-200"
                 >
                     {running ? "일시정지" : "재시작"}
                 </button>
-                <button
-                    onClick={onReset}
-                    className="rounded-2xl py-3 border border-neutral-200 active:scale-95"
-                >
+                <button onClick={onReset} className="rounded-2xl py-3 border border-neutral-200">
                     리셋
                 </button>
-            </div>
-            <div className="mt-3 text-xs text-neutral-500">
-                • 시작시 10초 프리카운트 • 각 구간 종료 10초 전 비프 카운트
             </div>
         </section>
     );

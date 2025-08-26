@@ -13,6 +13,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="ko">
             <head>
                 <link rel="manifest" href="/manifest.webmanifest" />
+                <link
+                    rel="preload"
+                    as="font"
+                    href="/fonts/samsungsharpsans-regular.otf"
+                    type="font/otf"
+                    crossOrigin="anonymous"
+                />
+                <link
+                    rel="preload"
+                    as="font"
+                    href="/fonts/samsungsharpsans-medium.otf"
+                    type="font/otf"
+                    crossOrigin="anonymous"
+                />
+                <link
+                    rel="preload"
+                    as="font"
+                    href="/fonts/samsungsharpsans-bold.otf"
+                    type="font/otf"
+                    crossOrigin="anonymous"
+                />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
                 <meta

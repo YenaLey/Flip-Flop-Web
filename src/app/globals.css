@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+    font-family: "Samsung Sharp Sans";
+    src: url("/fonts/samsungsharpsans-regular.otf") format("otf");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Samsung Sharp Sans";
+    src: url("/fonts/samsungsharpsans-medium.otf") format("otf");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Samsung Sharp Sans";
+    src: url("/fonts/samsungsharpsans-bold.otf") format("otf");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 html,
 body {
     height: 100%;
