@@ -16,19 +16,26 @@ const fmt = (s: number) => {
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<Log[]>([]);
+
     useEffect(() => {
         setLogs(loadLogs());
     }, []);
+
     const remove = (id: string) => {
-        const next = logs.filter((l) => l.id !== id);
-        setLogs(next);
-        saveLogs(next);
-        alert("삭제되었습니다.");
+        if (confirm("삭제하시겠습니까?")) {
+            const next = logs.filter((l) => l.id !== id);
+            setLogs(next);
+            saveLogs(next);
+            alert("삭제되었습니다.");
+        }
     };
+
     const clearAll = () => {
-        setLogs([]);
-        saveLogs([]);
-        alert("삭제되었습니다.");
+        if (confirm("전체 삭제하시겠습니까?")) {
+            setLogs([]);
+            saveLogs([]);
+            alert("삭제되었습니다.");
+        }
     };
 
     return (
