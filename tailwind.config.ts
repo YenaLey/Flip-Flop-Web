@@ -5,9 +5,7 @@ export default {
     theme: {
         extend: {
             colors: { brand: "#222", accent: "#4ade80" },
-            fontFamily: {
-                sans: ['"Samsung Sharp Sans"', "Arial"],
-            },
+            fontFamily: { sans: ["var(--font-sans)", "system-ui", "sans-serif"] },
         },
     },
     plugins: [],

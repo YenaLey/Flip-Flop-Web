@@ -1,47 +1,21 @@
-"use client";
+import type { Segment } from "@/types";
+import { makeTimelineWavUrl } from "./wav";
 
-export function useBeep(volume: number) {
-    let ctx: AudioContext | null = null;
-    const ensure = async () => {
-        if (!ctx) ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (ctx.state === "suspended") await ctx.resume();
-    };
-    const beep = async (freq = 900, ms = 80) => {
-        await ensure();
-        const g = ctx!.createGain();
-        const o = ctx!.createOscillator();
-        o.type = "sine";
-        o.frequency.value = freq;
-        g.gain.value = volume;
-        o.connect(g).connect(ctx!.destination);
-        o.start();
-        o.stop(ctx!.currentTime + ms / 1000);
-        (navigator as any).vibrate?.(15);
-    };
-    return beep;
-}
+export type RenderResult = {
+    url: string;
+    segOffsets: number[];
+    total: number;
+};
 
-const SILENT =
-    "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-export function useBgAudio() {
-    let el: HTMLAudioElement | null = null;
-    const on = async (title = "Async") => {
-        if (!el) {
-            el = new Audio(SILENT);
-            el.loop = true;
-            el.volume = 0.02;
-            document.body.appendChild(el);
-        }
-        try {
-            const ms = (navigator as any).mediaSession;
-            if (ms && (window as any).MediaMetadata)
-                ms.metadata = new (window as any).MediaMetadata({ title });
-        } catch {}
-        await el.play().catch(() => {});
-    };
-    const off = () => {
-        el?.pause();
-    };
-    return { on, off };
+export function renderTimeline(tl: Segment[], volume: number): RenderResult {
+    let offset = 0;
+    const segs = [];
+    const segOffsets: number[] = [];
+    for (const s of tl) {
+        segs.push({ start: offset, len: s.secs, phase: s.phase });
+        segOffsets.push(offset + s.secs);
+        offset += s.secs;
+    }
+    const url = makeTimelineWavUrl(segs, volume);
+    return { url, segOffsets, total: offset };
 }

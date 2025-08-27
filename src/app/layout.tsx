@@ -1,39 +1,22 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { Ubuntu } from "next/font/google";
 
-export const metadata: Metadata = {
-    title: "Async",
-    description: "Interval running timer",
-};
-
+export const metadata: Metadata = { title: "Flip Flop", description: "Interval Running Timer" };
 export const viewport: Viewport = { themeColor: "#222222" };
+
+const ubuntu = Ubuntu({
+    subsets: ["latin"],
+    weight: ["300", "500", "700"],
+    display: "swap",
+    variable: "--font-sans",
+});
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="ko">
             <head>
                 <link rel="manifest" href="/manifest.webmanifest" />
-                <link
-                    rel="preload"
-                    as="font"
-                    href="/fonts/samsungsharpsans-regular.otf"
-                    type="font/otf"
-                    crossOrigin="anonymous"
-                />
-                <link
-                    rel="preload"
-                    as="font"
-                    href="/fonts/samsungsharpsans-medium.otf"
-                    type="font/otf"
-                    crossOrigin="anonymous"
-                />
-                <link
-                    rel="preload"
-                    as="font"
-                    href="/fonts/samsungsharpsans-bold.otf"
-                    type="font/otf"
-                    crossOrigin="anonymous"
-                />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
                 <meta
@@ -42,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 />
                 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
             </head>
-            <body className="min-h-dvh bg-white text-brand">{children}</body>
+            <body className={`${ubuntu.variable} font-sans min-h-dvh bg-white`}>{children}</body>
         </html>
     );
 }
