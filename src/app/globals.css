@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --vh: 1vh;
+}
+
 html,
 body {
     height: 100%;

@@ -5,6 +5,14 @@ import Row from "@/components/Row";
 import type { Phase, Settings, Segment } from "@/types";
 import { buildTimeline, fmt } from "@/lib/timer";
 import { renderTimeline } from "@/lib/audio";
+import InstallPopup from "@/components/InstallPopup";
+import {
+    isIOS,
+    isStandalone,
+    wasDismissed,
+    markDismissed,
+    type BeforeInstallPromptEvent,
+} from "@/lib/install";
 
 type Status = "idle" | "running" | "paused" | "done";
 
@@ -21,6 +29,11 @@ export default function Page() {
     const [left, setLeft] = useState(cfg.warmup);
     const [status, setStatus] = useState<Status>("idle");
     const [locked, setLocked] = useState(false);
+
+    const [showInstall, setShowInstall] = useState(false);
+    const [ios, setIos] = useState(false);
+    const [installed, setInstalled] = useState(false);
+    const evRef = useRef<BeforeInstallPromptEvent | null>(null);
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const timelineRef = useRef<Segment[]>([]);
@@ -42,6 +55,54 @@ export default function Page() {
     useEffect(() => {
         if (audioRef.current) audioRef.current.volume = cfg.volume;
     }, [cfg.volume]);
+
+    useEffect(() => {
+        const dismissed = wasDismissed();
+        const isiOS = isIOS();
+        setIos(isiOS);
+        const standalone = isStandalone();
+        setInstalled(standalone);
+
+        const mm = window.matchMedia("(display-mode: standalone)");
+        const onDM = () => setInstalled(mm.matches);
+        mm.addEventListener?.("change", onDM);
+
+        const onBIP = (e: Event) => {
+            const ev = e as BeforeInstallPromptEvent;
+            ev.preventDefault();
+            evRef.current = ev;
+            if (!dismissed && !standalone) setShowInstall(true);
+        };
+        const onInstalled = () => {
+            setInstalled(true);
+            setShowInstall(false);
+            markDismissed();
+        };
+
+        window.addEventListener("beforeinstallprompt", onBIP);
+        window.addEventListener("appinstalled", onInstalled);
+
+        if (isiOS && !dismissed && !standalone) setShowInstall(true);
+
+        return () => {
+            window.removeEventListener("beforeinstallprompt", onBIP);
+            window.removeEventListener("appinstalled", onInstalled);
+            mm.removeEventListener?.("change", onDM);
+        };
+    }, []);
+
+    const triggerInstall = async () => {
+        const ev = evRef.current;
+        if (!ev) return;
+        await ev.prompt();
+        try {
+            const res = await ev.userChoice;
+            if (res.outcome !== "accepted") markDismissed();
+        } finally {
+            evRef.current = null;
+            setShowInstall(false);
+        }
+    };
 
     const applyFromTime = (t: number) => {
         const ends = segEndsRef.current;
@@ -170,7 +231,7 @@ export default function Page() {
     };
 
     return (
-        <div className="h-screen max-w-[500px] m-auto overflow-hidden">
+        <div className="h-screen max-w-[500px] m-auto">
             <button
                 onClick={onLockClick}
                 className={`fixed right-4 top-4 z-50 h-10 w-10 rounded-full border shadow flex items-center justify-center ${
@@ -187,7 +248,7 @@ export default function Page() {
                     </svg>
                 ) : (
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                        <path d="M17 8h-1V6a4 4 0 00-8 0v2H7a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2v-9a2 2 0 00-2-2zm-7-2a2 2 0 114 0v2h-4V6z" />
+                        <path d="M17 8h-1V6a4 4 0 00-8 0v2H7a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2v-9a2 2 0 00-2-2zm-7-2a2 2 0 114 0v2H6z" />
                         <path d="M9 13h6v2H9z" />
                     </svg>
                 )}
@@ -318,6 +379,18 @@ export default function Page() {
                     </div>
                 </div>
             </div>
+
+            {showInstall && (
+                <InstallPopup
+                    isIOS={ios}
+                    isInstalled={installed}
+                    onInstall={triggerInstall}
+                    onDismiss={() => {
+                        setShowInstall(false);
+                        markDismissed();
+                    }}
+                />
+            )}
         </div>
     );
 }
