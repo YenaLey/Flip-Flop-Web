@@ -1,9 +1,8 @@
 const CACHE = "flipflop-v1";
-// const ASSETS = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
-const ASSETS = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const PRECACHE = ["/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
-    e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+    e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)));
     self.skipWaiting();
 });
 self.addEventListener("activate", (e) => {
@@ -16,20 +15,36 @@ self.addEventListener("activate", (e) => {
     );
     self.clients.claim();
 });
+
 self.addEventListener("fetch", (e) => {
     const { request } = e;
-    if (request.method !== "GET" || new URL(request.url).origin !== location.origin) return;
+    const url = new URL(request.url);
+    if (request.method !== "GET" || url.origin !== location.origin) return;
+
+    const isHTML =
+        request.mode === "navigate" || request.headers.get("accept")?.includes("text/html");
+
+    if (isHTML) {
+        e.respondWith(
+            fetch(request)
+                .then((res) => {
+                    caches.open(CACHE).then((c) => c.put(request, res.clone()));
+                    return res;
+                })
+                .catch(() => caches.match(request))
+        );
+        return;
+    }
+
     e.respondWith(
-        caches.match(request).then(
-            (cached) =>
-                cached ||
-                fetch(request)
-                    .then((res) => {
-                        const copy = res.clone();
-                        caches.open(CACHE).then((c) => c.put(request, copy));
-                        return res;
-                    })
-                    .catch(() => caches.match("/"))
-        )
+        caches.match(request).then((cached) => {
+            const fetching = fetch(request)
+                .then((res) => {
+                    caches.open(CACHE).then((c) => c.put(request, res.clone()));
+                    return res;
+                })
+                .catch(() => cached);
+            return cached || fetching;
+        })
     );
 });
