@@ -13,6 +13,7 @@ import {
     markDismissed,
     type BeforeInstallPromptEvent,
 } from "@/lib/install";
+import { FaLock, FaLockOpen } from "react-icons/fa";
 
 type Status = "idle" | "running" | "paused" | "done";
 
@@ -30,7 +31,7 @@ export default function Page() {
     const [status, setStatus] = useState<Status>("idle");
     const [locked, setLocked] = useState(false);
 
-    const [showInstall, setShowInstall] = useState(false);
+    const [showInstall, setShowInstall] = useState(true);
     const [ios, setIos] = useState(false);
     const [installed, setInstalled] = useState(false);
     const evRef = useRef<BeforeInstallPromptEvent | null>(null);
@@ -232,37 +233,14 @@ export default function Page() {
 
     return (
         <div className="h-screen max-w-[500px] m-auto">
-            <button
-                onClick={onLockClick}
-                className={`fixed right-4 top-4 z-50 h-10 w-10 rounded-full border shadow flex items-center justify-center ${
-                    locked
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-black border-neutral-300"
-                }`}
-                aria-pressed={locked}
-                aria-label={locked ? "Unlock (double tap)" : "Lock"}
-            >
-                {locked ? (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                        <path d="M17 8h-1V6a4 4 0 10-8 0v2H7a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2v-9a2 2 0 00-2-2zm-7-2a2 2 0 114 0v2h-4V6zm7 13H7v-9h10v9z" />
-                    </svg>
-                ) : (
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                        <path d="M17 8h-1V6a4 4 0 00-8 0v2H7a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2v-9a2 2 0 00-2-2zm-7-2a2 2 0 114 0v2H6z" />
-                        <path d="M9 13h6v2H9z" />
-                    </svg>
-                )}
-            </button>
-
-            {locked && <div className="fixed inset-0 z-40 bg-transparent" />}
-
-            <div className="px-5 pt-4">
-                <h1 className="text-4xl font-bold text-center italic">Flip Flop</h1>
+            <div className="px-5 pt-4 flex justify-start items-center gap-4">
+                <img src="/icons/icon-light.png" alt="logo" className="w-10 h-10" />
+                <h1 className="text-2xl font-bold tracking-tight">Flip Flop</h1>
             </div>
 
             <div className="mx-5 mt-6 rounded-3xl border border-neutral-200 p-6">
                 <div className="text-neutral-500">Phase</div>
-                <div className="mt-1 text-4xl font-bold">{phase.toUpperCase()}</div>
+                <div className="mt-1 text-4xl font-bold tracking-tight">{phase.toUpperCase()}</div>
                 <div className="mt-4 flex flex-row justify-between">
                     <div>
                         <div className="text-neutral-500">Set</div>
@@ -379,6 +357,20 @@ export default function Page() {
                     </div>
                 </div>
             </div>
+
+            <button
+                onClick={onLockClick}
+                className={`fixed right-4 top-4 z-50 h-10 w-10 rounded-full border shadow flex items-center justify-center ${
+                    locked
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-black border-neutral-300"
+                }`}
+                aria-pressed={locked}
+                aria-label={locked ? "Unlock (double tap)" : "Lock"}
+            >
+                {locked ? <FaLock className="h-5 w-5" /> : <FaLockOpen className="h-5 w-5" />}
+            </button>
+            {locked && <div className="fixed inset-0 z-40 bg-transparent" />}
 
             {showInstall && (
                 <InstallPopup
