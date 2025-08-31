@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import RegisterSW from "./register-sw";
-import IOSSplashLinks from "./ios-splash-links";
+import Register from "@/app/sw/Register";
+import IosSplashLinks from "@/app/sw/IosSplashLinks";
 
 export const metadata: Metadata = {
     title: "Flip Flop",
@@ -26,10 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
                 <meta name="apple-mobile-web-app-title" content="Flip Flop" />
 
-                <IOSSplashLinks />
+                <IosSplashLinks />
             </head>
             <body className="font-sans h-screen bg-white">
-                <RegisterSW />
+                <Register />
                 {children}
             </body>
         </html>

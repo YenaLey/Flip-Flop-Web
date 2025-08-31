@@ -1,21 +1,23 @@
-"use client";
-
-export default function Row(props: {
+export default function SettingRow({
+    label,
+    value,
+    onDecrease,
+    onIncrease,
+}: {
     label: string;
     value: number;
-    dec: () => void;
-    inc: () => void;
+    onDecrease: () => void;
+    onIncrease: () => void;
 }) {
-    const { label, value, dec, inc } = props;
     return (
         <div className="mt-3 flex flex-row items-center justify-between">
             <span className="text-lg">{label}</span>
             <div className="flex flex-row items-center gap-3">
-                <button onClick={dec} className="rounded-2xl border px-3 py-1.5">
+                <button onClick={onDecrease} className="rounded-2xl border px-3 py-1.5">
                     -
                 </button>
                 <span className="w-14 text-center">{value}</span>
-                <button onClick={inc} className="rounded-2xl border px-3 py-1.5">
+                <button onClick={onIncrease} className="rounded-2xl border px-3 py-1.5">
                     +
                 </button>
             </div>

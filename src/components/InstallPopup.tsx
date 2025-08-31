@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { LS_KEY } from "@/lib/install";
+import { setInstallPopupHidden } from "@/utils/pwa";
 
-export default function InstallPopup(props: {
+export default function InstallPopup({
+    isIOS,
+    isInstalled,
+    onInstall,
+    onDismiss,
+}: {
     isIOS: boolean;
     isInstalled: boolean;
     onInstall?: () => Promise<void> | void;
     onDismiss: () => void;
 }) {
-    const { isIOS, isInstalled, onInstall, onDismiss } = props;
     if (isInstalled) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/20 p-4">
@@ -28,8 +32,13 @@ export default function InstallPopup(props: {
     );
 }
 
-function AndroidCard(props: { onInstall?: () => Promise<void> | void; onDismiss: () => void }) {
-    const { onInstall, onDismiss } = props;
+function AndroidCard({
+    onInstall,
+    onDismiss,
+}: {
+    onInstall?: () => Promise<void> | void;
+    onDismiss: () => void;
+}) {
     const [busy, setBusy] = useState(false);
 
     const clickInstall = async () => {
@@ -61,25 +70,23 @@ function AndroidCard(props: { onInstall?: () => Promise<void> | void; onDismiss:
             </button>
             {!onInstall && (
                 <div className="mt-2 text-center text-xs text-neutral-500">
-                    브라우저 메뉴의 “앱 설치” 또는 “홈 화면에 추가”를 선택하세요
+                    브라우저 메뉴의 “홈 화면에 추가”를 선택하세요
                 </div>
             )}
         </div>
     );
 }
 
-function IOSCard(props: { onDismiss: () => void }) {
-    const { onDismiss } = props;
+function IOSCard({ onDismiss }: { onDismiss: () => void }) {
     return (
         <div className="mt-4">
             <ol className="list-decimal pl-5 text-sm text-neutral-700 space-y-1">
-                <li>공유 버튼을 탭</li>
-                <li>“홈 화면에 추가” 선택</li>
-                <li>추가를 누르면 설치됩니다</li>
+                <li>공유 버튼을 선택</li>
+                <li>“홈 화면에 추가”를 누르면 앱이 설치됩니다</li>
             </ol>
             <button
                 onClick={() => {
-                    localStorage.setItem(LS_KEY, "1");
+                    setInstallPopupHidden();
                     onDismiss();
                 }}
                 className="mt-4 w-full rounded-2xl border border-neutral-300 py-3 font-semibold"

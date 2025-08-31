@@ -1,4 +1,4 @@
-export default function IOSSplashLinks() {
+export default function IosSplashLinks() {
     return (
         <>
             {/* landscape */}

@@ -5,6 +5,7 @@ self.addEventListener("install", (e) => {
     e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)));
     self.skipWaiting();
 });
+
 self.addEventListener("activate", (e) => {
     e.waitUntil(
         caches
